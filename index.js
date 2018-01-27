@@ -3,21 +3,23 @@ var mongoose = require('mongoose');
 var seed = require("./seed")
 var pet = require("./models/pet");
 var NodeGeocoder = require('node-geocoder');
+var bodyParser = require("body-parser");
 
 var options = {
   provider: 'google',
  
   // Optional depending on the providers
   httpAdapter: 'https', // Default
-  apiKey: 'YOUR_API_KEY', // for Mapquest, OpenCage, Google Premier
+  apiKey: 'AIzaSyDf45GAUkHmge3JDiJETEN_0nlRiAGmQV4', // for Mapquest, OpenCage, Google Premier
   formatter: null         // 'gpx', 'string', ...
 };
  
 var geocoder = NodeGeocoder(options);
 
-mongoose.connect("mongodb://localhost/pets");
+mongoose.connect("mongodb://Li:7474974a@ds211558.mlab.com:11558/petweather");
 
 var app = express();
+app.use(bodyParser.urlencoded({extended: true}));
 seed();
 
 var currentId = 3;
@@ -38,18 +40,20 @@ app.get("/",function(req,res){
     //res.send("pet page");
 });
 
-app.post("/new/:name/:type/:breed/:location/:latitude/:longitude",function(req,res){
-    var name = req.params.name;
-    var breed = req.params.breed;
-    var location = req.params.location;
-    var latitude = req.params.latitude;
-    var longitude = req.params.longitude;
+app.post("/new",function(req,res){
+    //console.log(req);
+    var name = req.body.name;
+    var breed = req.body.breed;
+    var location = req.body.location;
+    var latitude = req.body.latitude;
+    var longitude = req.body.longitude;
     pet.find({ name: name, breed: breed }, function(err,result){
         if(err){
             console.log(err);
         }
         else{
-            if(result != []){
+            if(result.length != 0){
+                console.log(result.length);
                 res.send("fail, data already exists");
             }
             else{
@@ -58,14 +62,16 @@ app.post("/new/:name/:type/:breed/:location/:latitude/:longitude",function(req,r
                         console.log(err);
                     }
                     else{
-                        if(result.latitude != latitude || result.longitude != longitude){
+                        //console.log(result);
+                        if(result[0].latitude != latitude || result[0].longitude != longitude){
+                            //console.log("latitude"+result.latitude+","+"longitude"+result.longitude);
                             res.send("fail, location not match latitute or longitude");
                         }
                         else{
                             var new_pet = {
                                 id: currentId,
                                 name: name,
-                                type: req.params.type,
+                                type: req.body.type,
                                 breed: breed,
                                 location: location,
                                 latitude: latitude,
@@ -74,6 +80,9 @@ app.post("/new/:name/:type/:breed/:location/:latitude/:longitude",function(req,r
                             pet.create(new_pet,function(err,pet){
                                 if(err){
                                     console.log(err);
+                                }
+                                else{
+                                    res.redirect("https://petinterface.herokuapp.com/");
                                 }
                             })
                         }
@@ -85,7 +94,7 @@ app.post("/new/:name/:type/:breed/:location/:latitude/:longitude",function(req,r
     
 });
 
-app.get("/:id",function(req,res){
+app.get("/pets/:id",function(req,res){
     pet.find({ id: req.params.id },function(err,pet){
         if(err){
             console.log(err);
